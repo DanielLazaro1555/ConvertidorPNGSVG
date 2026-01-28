@@ -1,441 +1,411 @@
 import os
-import argparse
+import sys
 from pathlib import Path
-from typing import Optional, Tuple
-import tempfile
 
-def setup_environment():
-    """Configura el entorno y verifica dependencias"""
-    try:
-        import vtracer
-        import cairosvg
-        import svglib
-        from svglib.svglib import svg2rlg
-        from reportlab.graphics import renderPM
-        from PIL import Image
-        return True
-    except ImportError as e:
-        print(f"Error: Falta instalar dependencias. Ejecuta:")
-        print("pip install vtracer cairosvg svglib reportlab pillow")
-        return False
-
-def png_to_svg_high_quality(
-    input_path: str,
-    output_path: str,
-    mode: str = 'spline',
-    colormode: str = 'color',
-    hierarchical: str = 'stacked',
-    cores: int = 4,
-    filter_speckle: int = 4,
-    color_precision: int = 6,
-    layer_difference: float = 16,
-    corner_threshold: float = 60,
-    length_threshold: float = 4.0,
-    max_iterations: int = 10,
-    splice_threshold: float = 45,
-    path_precision: int = 3
-) -> bool:
-    """
-    Convierte PNG a SVG con máxima calidad usando vtracer
+class ConvertidorAutomatico:
+    def __init__(self, directorio=None):
+        self.directorio = directorio or os.getcwd()
+        self.archivos_svg = []
+        self.archivos_png = []
+        self.archivos_pdf = []
+        self.escanear_archivos()
     
-    Args:
-        input_path: Ruta del archivo PNG de entrada
-        output_path: Ruta del archivo SVG de salida
-        mode: 'spline' para curvas suaves, 'polygon' para líneas rectas
-        colormode: 'color', 'binary', 'binary-fast', o 'curve'
-        hierarchical: 'stacked' o 'cutout'
-        cores: Número de núcleos a usar
-        filter_speckle: Tamaño mínimo de detalle a conservar
-        color_precision: Precisión de color (1-8)
-        layer_difference: Diferencia mínima entre capas
-        corner_threshold: Umbral para esquinas (grados)
-        length_threshold: Longitud mínima de segmento
-        max_iterations: Iteraciones para optimización
-        splice_threshold: Umbral para unir segmentos
-        path_precision: Precisión decimal de las rutas
+    def escanear_archivos(self):
+        """Escanea y encuentra todos los archivos convertibles"""
+        print(f"\n📁 Escaneando: {self.directorio}")
         
-    Returns:
-        True si la conversión fue exitosa
-    """
-    try:
-        import vtracer
+        self.archivos_svg = []
+        self.archivos_png = []
+        self.archivos_pdf = []
         
-        # Verificar que el archivo existe
-        if not os.path.exists(input_path):
-            print(f"Error: No se encontró el archivo {input_path}")
-            return False
+        for archivo in os.listdir(self.directorio):
+            ruta = os.path.join(self.directorio, archivo)
+            if os.path.isfile(ruta):
+                extension = archivo.lower()
+                
+                if extension.endswith('.svg'):
+                    self.archivos_svg.append(archivo)
+                elif extension.endswith('.png'):
+                    self.archivos_png.append(archivo)
+                elif extension.endswith('.pdf'):
+                    self.archivos_pdf.append(archivo)
         
-        print(f"Convirtiendo PNG a SVG: {input_path}")
-        print("Configuración de alta calidad activada...")
-        
-        # Configuración para máxima calidad
-        vtracer.convert_image_to_svg_py(
-            input_path,
-            output_path,
-            mode=mode,
-            colormode=colormode,
-            hierarchical=hierarchical,
-            cores=cores,
-            filter_speckle=filter_speckle,
-            color_precision=color_precision,
-            layer_difference=layer_difference,
-            corner_threshold=corner_threshold,
-            length_threshold=length_threshold,
-            max_iterations=max_iterations,
-            splice_threshold=splice_threshold,
-            path_precision=path_precision
-        )
-        
-        print(f"✓ SVG guardado en: {output_path}")
-        print(f"Tamaño del archivo: {os.path.getsize(output_path)} bytes")
-        return True
-        
-    except Exception as e:
-        print(f"Error en PNG a SVG: {str(e)}")
-        return False
-
-def svg_to_png_high_quality(
-    input_path: str,
-    output_path: str,
-    dpi: int = 600,
-    scale: float = 1.0,
-    background_color: str = None,
-    width: int = None,
-    height: int = None
-) -> bool:
-    """
-    Convierte SVG a PNG con máxima calidad usando múltiples métodos
+        print(f"🎯 SVG: {len(self.archivos_svg)} archivos")
+        print(f"📸 PNG: {len(self.archivos_png)} archivos")
+        print(f"📄 PDF: {len(self.archivos_pdf)} archivos")
     
-    Args:
-        input_path: Ruta del archivo SVG de entrada
-        output_path: Ruta del archivo PNG de salida
-        dpi: Resolución en puntos por pulgada
-        scale: Factor de escala
-        background_color: Color de fondo (ej: 'white', '#FFFFFF')
-        width: Ancho específico en píxeles
-        height: Alto específico en píxeles
+    def mostrar_menu(self):
+        """Muestra menú con archivos detectados"""
+        while True:
+            print("\n" + "="*60)
+            print("🔄 CONVERTIDOR AUTOMÁTICO")
+            print("="*60)
+            
+            # Mostrar archivos disponibles
+            print("\n📂 ARCHIVOS ENCONTRADOS:")
+            
+            if self.archivos_svg:
+                print("\n🎯 ARCHIVOS SVG:")
+                for i, archivo in enumerate(self.archivos_svg, 1):
+                    print(f"   {i:2}. {archivo}")
+            
+            if self.archivos_png:
+                print("\n📸 ARCHIVOS PNG:")
+                for i, archivo in enumerate(self.archivos_png, 1):
+                    print(f"   {i:2}. {archivo}")
+            
+            if self.archivos_pdf:
+                print("\n📄 ARCHIVOS PDF:")
+                for i, archivo in enumerate(self.archivos_pdf, 1):
+                    print(f"   {i:2}. {archivo}")
+            
+            print("\n" + "="*60)
+            print("OPCIONES DE CONVERSIÓN:")
+            print("1. 🎯 SVG → PNG (alta calidad)")
+            print("2. 🎯 SVG → PDF")
+            print("3. 📸 PNG → SVG")
+            print("4. 📄 PDF → PNG (todas las páginas)")
+            print("5. 🔄 Re-escanear directorio")
+            print("6. 🚪 Salir")
+            print("="*60)
+            
+            opcion = input("\n👉 Selecciona opción (1-6): ").strip()
+            
+            if opcion == '6':
+                print("👋 ¡Hasta luego!")
+                break
+            
+            elif opcion == '5':
+                self.escanear_archivos()
+                continue
+            
+            elif opcion in ['1', '2']:
+                self.menu_svg(opcion)
+            
+            elif opcion == '3':
+                self.menu_png()
+            
+            elif opcion == '4':
+                self.menu_pdf()
+    
+    def menu_svg(self, tipo_conversion):
+        """Menu para archivos SVG"""
+        if not self.archivos_svg:
+            print("\n❌ No hay archivos SVG en el directorio.")
+            input("Presiona Enter para continuar...")
+            return
         
-    Returns:
-        True si la conversión fue exitosa
-    """
-    try:
-        # Método 1: Usando cairosvg (mejor para SVG complejos)
+        print(f"\n🎯 ARCHIVOS SVG DISPONIBLES:")
+        for i, archivo in enumerate(self.archivos_svg, 1):
+            print(f"{i:2}. {archivo}")
+        
+        try:
+            seleccion = input("\n👉 Número del archivo a convertir: ").strip()
+            if not seleccion:
+                return
+            
+            idx = int(seleccion) - 1
+            if 0 <= idx < len(self.archivos_svg):
+                archivo = self.archivos_svg[idx]
+                ruta_completa = os.path.join(self.directorio, archivo)
+                
+                if tipo_conversion == '1':  # SVG → PNG
+                    dpi = input("DPI (300, 600, 1200, Enter=600): ").strip()
+                    dpi = int(dpi) if dpi else 600
+                    self.convertir_svg_png(ruta_completa, dpi)
+                else:  # SVG → PDF
+                    self.convertir_svg_pdf(ruta_completa)
+            else:
+                print("❌ Selección inválida")
+        
+        except ValueError:
+            print("❌ Ingresa un número válido")
+    
+    def menu_png(self):
+        """Menu para archivos PNG"""
+        if not self.archivos_png:
+            print("\n❌ No hay archivos PNG en el directorio.")
+            input("Presiona Enter para continuar...")
+            return
+        
+        print(f"\n📸 ARCHIVOS PNG DISPONIBLES:")
+        for i, archivo in enumerate(self.archivos_png, 1):
+            print(f"{i:2}. {archivo}")
+        
+        try:
+            seleccion = input("\n👉 Número del archivo a convertir: ").strip()
+            if not seleccion:
+                return
+            
+            idx = int(seleccion) - 1
+            if 0 <= idx < len(self.archivos_png):
+                archivo = self.archivos_png[idx]
+                ruta_completa = os.path.join(self.directorio, archivo)
+                self.convertir_png_svg(ruta_completa)
+            else:
+                print("❌ Selección inválida")
+        
+        except ValueError:
+            print("❌ Ingresa un número válido")
+    
+    def menu_pdf(self):
+        """Menu para archivos PDF"""
+        if not self.archivos_pdf:
+            print("\n❌ No hay archivos PDF en el directorio.")
+            input("Presiona Enter para continuar...")
+            return
+        
+        print(f"\n📄 ARCHIVOS PDF DISPONIBLES:")
+        for i, archivo in enumerate(self.archivos_pdf, 1):
+            # Mostrar tamaño del archivo
+            ruta = os.path.join(self.directorio, archivo)
+            tamano = os.path.getsize(ruta) // 1024  # KB
+            print(f"{i:2}. {archivo} ({tamano} KB)")
+        
+        try:
+            seleccion = input("\n👉 Número del archivo a convertir: ").strip()
+            if not seleccion:
+                return
+            
+            idx = int(seleccion) - 1
+            if 0 <= idx < len(self.archivos_pdf):
+                archivo = self.archivos_pdf[idx]
+                ruta_completa = os.path.join(self.directorio, archivo)
+                
+                dpi = input("DPI para PNG (150, 300, 600, Enter=300): ").strip()
+                dpi = int(dpi) if dpi else 300
+                self.convertir_pdf_png(ruta_completa, dpi)
+            else:
+                print("❌ Selección inválida")
+        
+        except ValueError:
+            print("❌ Ingresa un número válido")
+    
+    def convertir_svg_png(self, svg_path, dpi=600):
+        """Convierte SVG a PNG con máxima calidad"""
         try:
             import cairosvg
             
-            print(f"Convirtiendo SVG a PNG usando cairosvg (método 1)...")
+            nombre_base = Path(svg_path).stem
+            png_path = os.path.join(self.directorio, f"{nombre_base}_{dpi}dpi.png")
             
-            # Configurar opciones de exportación
-            kwargs = {
-                'dpi': dpi,
-                'scale': scale,
-                'output_width': width,
-                'output_height': height,
-            }
-            
-            # Eliminar None values
-            kwargs = {k: v for k, v in kwargs.items() if v is not None}
+            print(f"🔄 Convirtiendo: {Path(svg_path).name} → PNG ({dpi} DPI)...")
             
             cairosvg.svg2png(
-                url=input_path,
-                write_to=output_path,
-                background_color=background_color,
-                **kwargs
+                url=svg_path,
+                write_to=png_path,
+                dpi=dpi,
+                background_color='white',
+                scale=1.0
             )
             
-        except Exception as e1:
-            print(f"Método cairosvg falló: {str(e1)}")
+            # Verificar tamaño resultante
+            if os.path.exists(png_path):
+                from PIL import Image
+                with Image.open(png_path) as img:
+                    ancho, alto = img.size
+                tamano = os.path.getsize(png_path) // 1024
+                print(f"✅ Convertido: {Path(png_path).name}")
+                print(f"   📐 Dimensiones: {ancho}×{alto} px")
+                print(f"   📊 Tamaño: {tamano} KB")
+                print(f"   🎯 Calidad: {dpi} DPI")
+            else:
+                print("❌ Error: No se creó el archivo PNG")
             
-            # Método 2: Usando svglib + reportlab (alternativa)
-            try:
-                from svglib.svglib import svg2rlg
-                from reportlab.graphics import renderPM
+            return png_path
+            
+        except ImportError:
+            print("❌ Error: cairosvg no está instalado")
+            print("   Ejecuta: pip install cairosvg")
+            return None
+        except Exception as e:
+            print(f"❌ Error en conversión: {e}")
+            return None
+    
+    def convertir_svg_pdf(self, svg_path):
+        """Convierte SVG a PDF"""
+        try:
+            import cairosvg
+            
+            nombre_base = Path(svg_path).stem
+            pdf_path = os.path.join(self.directorio, f"{nombre_base}.pdf")
+            
+            print(f"🔄 Convirtiendo: {Path(svg_path).name} → PDF...")
+            
+            cairosvg.svg2pdf(url=svg_path, write_to=pdf_path)
+            
+            if os.path.exists(pdf_path):
+                tamano = os.path.getsize(pdf_path) // 1024
+                print(f"✅ Convertido: {Path(pdf_path).name}")
+                print(f"   📊 Tamaño: {tamano} KB")
+            else:
+                print("❌ Error: No se creó el archivo PDF")
+            
+            return pdf_path
+            
+        except ImportError:
+            print("❌ Error: cairosvg no está instalado")
+            print("   Ejecuta: pip install cairosvg")
+            return None
+        except Exception as e:
+            print(f"❌ Error en conversión: {e}")
+            return None
+    
+    def convertir_png_svg(self, png_path):
+        """Convierte PNG a SVG con calidad óptima"""
+        try:
+            import vtracer
+            
+            nombre_base = Path(png_path).stem
+            svg_path = os.path.join(self.directorio, f"{nombre_base}.svg")
+            
+            print(f"🔄 Convirtiendo: {Path(png_path).name} → SVG...")
+            
+            # Parámetros para buena calidad
+            vtracer.convert_image_to_svg_py(
+                png_path,
+                svg_path,
+                colormode='color',
+                hierarchical='stacked',
+                mode='spline',
+                filter_speckle=12,
+                color_precision=6,
+                corner_threshold=60,
+                max_iterations=15
+            )
+            
+            if os.path.exists(svg_path):
+                tamano = os.path.getsize(svg_path) // 1024
+                print(f"✅ Convertido: {Path(svg_path).name}")
+                print(f"   📊 Tamaño: {tamano} KB")
+                print("   ⚠️  Nota: PNG→SVG es vectorización, puede perder detalles")
+            else:
+                print("❌ Error: No se creó el archivo SVG")
+            
+            return svg_path
+            
+        except ImportError:
+            print("❌ Error: vtracer no está instalado")
+            print("   Ejecuta: pip install vtracer")
+            return None
+        except Exception as e:
+            print(f"❌ Error en conversión: {e}")
+            return None
+    
+    def convertir_pdf_png(self, pdf_path, dpi=300):
+        """Convierte PDF a PNG (cada página)"""
+        try:
+            from pdf2image import convert_from_path
+            
+            nombre_base = Path(pdf_path).stem
+            
+            print(f"🔄 Convirtiendo PDF a PNG ({dpi} DPI)...")
+            print("   Esto puede tardar unos segundos...")
+            
+            # Convertir todas las páginas
+            imagenes = convert_from_path(pdf_path, dpi=dpi)
+            
+            archivos_creados = []
+            for i, imagen in enumerate(imagenes):
+                png_path = os.path.join(self.directorio, f"{nombre_base}_pagina_{i+1}_{dpi}dpi.png")
+                imagen.save(png_path, 'PNG', quality=95)
                 
-                print("Usando svglib + reportlab (método 2)...")
+                # Obtener tamaño de la imagen
+                from PIL import Image
+                with Image.open(png_path) as img:
+                    ancho, alto = img.size
                 
-                # Convertir SVG a ReportLab Drawing
-                drawing = svg2rlg(input_path)
-                
-                # Escalar si es necesario
-                if scale != 1.0:
-                    drawing.width = drawing.width * scale
-                    drawing.height = drawing.height * scale
-                    drawing.scale(scale, scale)
-                
-                # Configurar DPI
-                renderPM.drawToFile(
-                    drawing,
-                    output_path,
-                    fmt='PNG',
-                    dpi=dpi
-                )
-                
-            except Exception as e2:
-                print(f"Método svglib falló: {str(e2)}")
-                
-                # Método 3: Usando PIL como último recurso
-                try:
-                    from PIL import Image
-                    import io
-                    
-                    print("Usando PIL (método 3)...")
-                    
-                    # Convertir con cairosvg a bytes y luego a PIL
-                    png_bytes = cairosvg.svg2png(
-                        url=input_path,
-                        dpi=dpi,
-                        scale=scale
-                    )
-                    
-                    # Abrir con PIL para posible post-procesamiento
-                    img = Image.open(io.BytesIO(png_bytes))
-                    
-                    # Aplicar configuración de tamaño si se especificó
-                    if width and height:
-                        img = img.resize((width, height), Image.Resampling.LANCZOS)
-                    elif width:
-                        ratio = width / img.width
-                        new_height = int(img.height * ratio)
-                        img = img.resize((width, new_height), Image.Resampling.LANCZOS)
-                    elif height:
-                        ratio = height / img.height
-                        new_width = int(img.width * ratio)
-                        img = img.resize((new_width, height), Image.Resampling.LANCZOS)
-                    
-                    # Guardar con máxima compresión sin pérdida
-                    img.save(
-                        output_path,
-                        'PNG',
-                        optimize=True,
-                        dpi=(dpi, dpi)
-                    )
-                    
-                except Exception as e3:
-                    print(f"Todos los métodos fallaron: {str(e3)}")
-                    return False
-        
-        print(f"✓ PNG guardado en: {output_path}")
-        print(f"Tamaño del archivo: {os.path.getsize(output_path)} bytes")
-        print(f"Resolución: {dpi} DPI")
-        return True
-        
-    except Exception as e:
-        print(f"Error en SVG a PNG: {str(e)}")
-        return False
+                tamano = os.path.getsize(png_path) // 1024
+                print(f"   ✅ Página {i+1}: {ancho}×{alto} px, {tamano} KB")
+                archivos_creados.append(png_path)
+            
+            print(f"\n📊 Resumen: {len(archivos_creados)} páginas convertidas")
+            print(f"🎯 Calidad: {dpi} DPI")
+            print(f"📁 Guardadas en: {self.directorio}")
+            
+            return archivos_creados
+            
+        except ImportError:
+            print("❌ Error: pdf2image no está instalado")
+            print("   Ejecuta: pip install pdf2image")
+            print("\n💡 Además, necesitas instalar poppler:")
+            print("   Ubuntu/Debian: sudo apt-get install poppler-utils")
+            print("   Mac: brew install poppler")
+            return []
+        except Exception as e:
+            print(f"❌ Error en conversión: {e}")
+            return []
 
-def batch_convert(
-    input_pattern: str,
-    output_dir: str,
-    conversion_type: str,
-    **kwargs
-) -> Tuple[int, int]:
-    """
-    Convierte múltiples archivos en lote
+def verificar_dependencias():
+    """Verifica e instala dependencias automáticamente"""
+    print("🔍 Verificando dependencias...")
     
-    Args:
-        input_pattern: Patrón de archivos (ej: '*.png', '*.svg')
-        output_dir: Directorio de salida
-        conversion_type: 'png_to_svg' o 'svg_to_png'
-        **kwargs: Parámetros adicionales para las funciones de conversión
-        
-    Returns:
-        Tupla (éxitos, fallos)
-    """
-    from glob import glob
+    dependencias = {
+        'cairosvg': 'cairosvg',
+        'vtracer': 'vtracer',
+        'pdf2image': 'pdf2image',
+        'PIL': 'pillow'
+    }
     
-    # Crear directorio de salida si no existe
-    os.makedirs(output_dir, exist_ok=True)
+    faltantes = []
     
-    # Encontrar archivos
-    files = glob(input_pattern)
-    
-    if not files:
-        print(f"No se encontraron archivos con el patrón: {input_pattern}")
-        return 0, 0
-    
-    print(f"Encontrados {len(files)} archivos para convertir...")
-    
-    successes = 0
-    failures = 0
-    
-    for input_file in files:
-        # Generar nombre de archivo de salida
-        input_path = Path(input_file)
-        
-        if conversion_type == 'png_to_svg':
-            output_file = input_path.with_suffix('.svg').name
-            output_path = os.path.join(output_dir, output_file)
-            
-            if png_to_svg_high_quality(str(input_path), output_path, **kwargs):
-                successes += 1
+    # Verificar cada dependencia
+    for modulo, paquete in dependencias.items():
+        try:
+            if modulo == 'PIL':
+                __import__('PIL')
             else:
-                failures += 1
-                
-        elif conversion_type == 'svg_to_png':
-            output_file = input_path.with_suffix('.png').name
-            output_path = os.path.join(output_dir, output_file)
-            
-            if svg_to_png_high_quality(str(input_path), output_path, **kwargs):
-                successes += 1
-            else:
-                failures += 1
+                __import__(modulo)
+            print(f"   ✅ {modulo}")
+        except ImportError:
+            print(f"   ❌ {modulo}")
+            faltantes.append(paquete)
     
-    return successes, failures
+    # Instalar dependencias faltantes
+    if faltantes:
+        print(f"\n📦 Instalando {len(faltantes)} dependencia(s)...")
+        for paquete in faltantes:
+            try:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "pip", "install", paquete, "--quiet"])
+                print(f"   ✅ {paquete} instalado")
+            except:
+                print(f"   ❌ Error instalando {paquete}")
+    
+    print("\n✅ Dependencias verificadas")
+    
+    # Verificar poppler para pdf2image
+    try:
+        import subprocess
+        result = subprocess.run(['which', 'pdftoppm'], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("\n⚠️  ATENCIÓN: Necesitas poppler para convertir PDF")
+            print("   En Ubuntu/Debian: sudo apt-get install poppler-utils")
+            print("   En Fedora: sudo dnf install poppler-utils")
+            print("   En Mac: brew install poppler")
+    except:
+        pass
 
 def main():
-    """Función principal para uso desde línea de comandos"""
+    """Función principal"""
+    print("="*60)
+    print("🔄 CONVERTIDOR AUTOMÁTICO SVG/PNG/PDF")
+    print("="*60)
+    print("📂 Directorio actual:", os.getcwd())
+    print("="*60)
     
     # Verificar dependencias
-    if not setup_environment():
-        return
+    verificar_dependencias()
     
-    parser = argparse.ArgumentParser(
-        description='Convertidor de imágenes PNG ↔ SVG de alta calidad'
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Comandos disponibles')
-    
-    # Parser para PNG a SVG
-    png2svg = subparsers.add_parser('png2svg', help='Convertir PNG a SVG')
-    png2svg.add_argument('input', help='Archivo PNG de entrada o patrón (ej: *.png)')
-    png2svg.add_argument('-o', '--output', help='Archivo SVG de salida o directorio')
-    png2svg.add_argument('--mode', choices=['spline', 'polygon'], default='spline',
-                        help='Modo de vectorización')
-    png2svg.add_argument('--colormode', 
-                        choices=['color', 'binary', 'binary-fast', 'curve'],
-                        default='color', help='Modo de color')
-    png2svg.add_argument('--dpi', type=int, default=600,
-                        help='DPI para procesamiento (sugerido: 300-1200)')
-    
-    # Parser para SVG a PNG
-    svg2png = subparsers.add_parser('svg2png', help='Convertir SVG a PNG')
-    svg2png.add_argument('input', help='Archivo SVG de entrada o patrón (ej: *.svg)')
-    svg2png.add_argument('-o', '--output', help='Archivo PNG de salida o directorio')
-    svg2png.add_argument('--dpi', type=int, default=600,
-                        help='Resolución en DPI (sugerido: 300-1200)')
-    svg2png.add_argument('--scale', type=float, default=1.0,
-                        help='Factor de escala')
-    svg2png.add_argument('--width', type=int, help='Ancho específico en píxeles')
-    svg2png.add_argument('--height', type=int, help='Alto específico en píxeles')
-    svg2png.add_argument('--background', help='Color de fondo (ej: white, #FFFFFF)')
-    
-    # Parser para conversión por lotes
-    batch = subparsers.add_parser('batch', help='Conversión por lotes')
-    batch.add_argument('pattern', help='Patrón de archivos (ej: *.png, *.svg)')
-    batch.add_argument('output_dir', help='Directorio de salida')
-    batch.add_argument('--type', choices=['png2svg', 'svg2png'], required=True,
-                      help='Tipo de conversión')
-    batch.add_argument('--dpi', type=int, default=600,
-                      help='Resolución para conversiones')
-    
-    args = parser.parse_args()
-    
-    if not args.command:
-        parser.print_help()
-        return
-    
-    if args.command == 'png2svg':
-        # Verificar si es un patrón o archivo único
-        if '*' in args.input:
-            # Conversión por lotes
-            output_dir = args.output if args.output else 'svg_output'
-            successes, failures = batch_convert(
-                args.input,
-                output_dir,
-                'png_to_svg',
-                mode=args.mode,
-                colormode=args.colormode
-            )
-            print(f"\nConversión completa: {successes} éxitos, {failures} fallos")
-        else:
-            # Archivo único
-            if args.output:
-                output_path = args.output
-            else:
-                input_path = Path(args.input)
-                output_path = input_path.with_suffix('.svg')
-            
-            success = png_to_svg_high_quality(
-                args.input,
-                output_path,
-                mode=args.mode,
-                colormode=args.colormode
-            )
-            
-            if not success:
-                print("La conversión falló")
-    
-    elif args.command == 'svg2png':
-        if '*' in args.input:
-            # Conversión por lotes
-            output_dir = args.output if args.output else 'png_output'
-            successes, failures = batch_convert(
-                args.input,
-                output_dir,
-                'svg_to_png',
-                dpi=args.dpi,
-                scale=args.scale,
-                width=args.width,
-                height=args.height,
-                background_color=args.background
-            )
-            print(f"\nConversión completa: {successes} éxitos, {failures} fallos")
-        else:
-            # Archivo único
-            if args.output:
-                output_path = args.output
-            else:
-                input_path = Path(args.input)
-                output_path = input_path.with_suffix('.png')
-            
-            success = svg_to_png_high_quality(
-                args.input,
-                output_path,
-                dpi=args.dpi,
-                scale=args.scale,
-                width=args.width,
-                height=args.height,
-                background_color=args.background
-            )
-            
-            if not success:
-                print("La conversión falló")
-    
-    elif args.command == 'batch':
-        successes, failures = batch_convert(
-            args.pattern,
-            args.output_dir,
-            'png_to_svg' if args.type == 'png2svg' else 'svg_to_png',
-            dpi=args.dpi
-        )
-        print(f"\nConversión por lotes completa: {successes} éxitos, {failures} fallos")
-
-def convertir_png_a_svg_simple(ruta_png: str, ruta_svg: str = None) -> bool:
-    """Función simple para convertir PNG a SVG"""
-    if not ruta_svg:
-        ruta_svg = Path(ruta_png).with_suffix('.svg')
-    
-    return png_to_svg_high_quality(
-        ruta_png,
-        ruta_svg,
-        mode='spline',
-        colormode='color',
-        color_precision=8,
-        max_iterations=20
-    )
-
-def convertir_svg_a_png_simple(ruta_svg: str, ruta_png: str = None, dpi: int = 600) -> bool:
-    """Función simple para convertir SVG a PNG"""
-    if not ruta_png:
-        ruta_png = Path(ruta_svg).with_suffix('.png')
-    
-    return svg_to_png_high_quality(
-        ruta_svg,
-        ruta_png,
-        dpi=dpi,
-        scale=1.0
-    )
+    # Crear e iniciar convertidor
+    convertidor = ConvertidorAutomatico()
+    convertidor.mostrar_menu()
 
 if __name__ == "__main__":
-    # Si se ejecuta directamente, usar línea de comandos
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n👋 Programa interrumpido")
+    except Exception as e:
+        print(f"\n❌ Error inesperado: {e}")
+        input("Presiona Enter para salir...")
